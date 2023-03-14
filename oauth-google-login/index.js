@@ -1,8 +1,9 @@
 const express = require('express');
 const session = require('express-session')
 const { redisStore } = require('./services/RedisStoreSession');
-const { GoogleStrategyImplementation } = require('./strategys/GoogleStrategy')
+const { GoogleStrategyImplementation } = require('./strategys/GoogleStrategy');
 const { LocalStrategyImplementation } = require('./strategys/LocalStrategy');
+const { DiscordStrategyImplementation } = require('./strategys/DiscordStrategy');
 const app = express()
 
 app.use(express.json())
@@ -37,13 +38,23 @@ passport.deserializeUser((obj, cb) => {
 })
 
 
+// OAUTH GOOGLE
 passport.use(GoogleStrategyImplementation);
-
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }))
 app.get('/auth/google/redirects', passport.authenticate('google', { failureRedirect: '/error' }), (req, res) => {
     res.redirect('/success')
 })
 
+// OAUTH DISCORD
+passport.use(DiscordStrategyImplementation);
+app.get('/auth/discord', passport.authenticate('discord'))
+app.get('/auth/discord/redirects', passport.authenticate('discord', {}), (req, res) => {
+    console.log(req.user)
+    if (req.user) return res.redirect('/success')
+    return res.redirect('/verify')
+})
+
+// LOCAL STRATEGY
 passport.use(LocalStrategyImplementation);
 app.post('/auth/login', passport.authenticate('local', { failureRedirect: '/verify', successRedirect: '/success' }),
     (req, res) => {
