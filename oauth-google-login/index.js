@@ -2,8 +2,11 @@ const express = require('express');
 const session = require('express-session')
 const { redisStore } = require('./services/RedisStoreSession');
 const { GoogleStrategyImplementation } = require('./strategys/GoogleStrategy')
-
+const { LocalStrategyImplementation } = require('./strategys/LocalStrategy');
 const app = express()
+
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 app.use(session({
     name: 'session.id',
@@ -40,6 +43,14 @@ app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'em
 app.get('/auth/google/redirects', passport.authenticate('google', { failureRedirect: '/error' }), (req, res) => {
     res.redirect('/success')
 })
+
+passport.use(LocalStrategyImplementation);
+app.post('/auth/login', passport.authenticate('local', { failureRedirect: '/verify', successRedirect: '/success' }),
+    (req, res) => {
+        console.log(req.user);
+        return res.redirect('/success')
+    }
+)
 
 app.get('/success', (req, res) => {
     console.log('REQ SESSION: ', JSON.stringify(req.session));
