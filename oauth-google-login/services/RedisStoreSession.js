@@ -14,4 +14,4 @@ const redisStore = new RedisStore({
     disableTouch: true
 });
 
-module.exports = { redisStore }
+module.exports = { redisStore, redisClient }
