@@ -4,6 +4,10 @@ const { redisStore } = require('./services/RedisStoreSession');
 const { GoogleStrategyImplementation } = require('./strategys/GoogleStrategy');
 const { LocalStrategyImplementation } = require('./strategys/LocalStrategy');
 const { DiscordStrategyImplementation } = require('./strategys/DiscordStrategy');
+const { onlyGoogleUser } = require('./middleware/onlyGoogleUser');
+const { isAuthenticated } = require('./middleware/isAuthenticated');
+const { ShooppingRoutes } = require('./routes/shoppingRoute');
+
 const app = express()
 
 app.use(express.json())
@@ -45,6 +49,10 @@ app.get('/auth/google/redirects', passport.authenticate('google', { failureRedir
     res.redirect('/success')
 })
 
+app.get('/auth/google/profile', onlyGoogleUser, (req, res) => {
+    return res.json(req.user).status(200)
+})
+
 // OAUTH DISCORD
 passport.use(DiscordStrategyImplementation);
 app.get('/auth/discord', passport.authenticate('discord'))
@@ -62,6 +70,27 @@ app.post('/auth/login', passport.authenticate('local', { failureRedirect: '/veri
         return res.redirect('/success')
     }
 )
+
+// Handling with sessions
+app.post('/addToSession', isAuthenticated, (req, res) => {
+    const body = req.body;
+    if (body.name) {
+
+        if (req.session.items) {
+            req.session.items = [...req.session.items, body];
+        } else {
+            req.session.items = [body]
+        }
+
+        req.session.save();
+        return res.json({ message: 'Item added' })
+    }
+    return res.json({ message: 'hmm.... you didnt send me anything!!!! 👁👄👁💅' })
+})
+
+app.get('/verifyMyCart', isAuthenticated, (req, res) => {
+    return res.json(req.session.items);
+})
 
 app.get('/success', (req, res) => {
     console.log('REQ SESSION: ', JSON.stringify(req.session));
@@ -90,6 +119,9 @@ app.get('/logout', (req, res) => {
         return res.json({ message: 'you was logout' })
     })
 })
+
+// Routes with chache through Redis
+app.use(ShooppingRoutes);
 
 app.listen(5500, () => {
     console.log('App running on port 5500')
